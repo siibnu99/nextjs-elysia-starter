@@ -1,3 +1,5 @@
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 
-export const db = drizzle(process.env.DATABASE_URL as string);
+const client = postgres(process.env.DATABASE_URL as string);
+export const db = drizzle(client);

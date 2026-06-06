@@ -22,7 +22,7 @@ pnpm drizzle-kit ...  # drizzle CLI commands
 | Framework | Next.js (App Router) | 16.x |
 | API | Elysia + @elysiajs/cors + @elysiajs/eden | 1.4.x |
 | Auth | better-auth | 1.6.x |
-| Database | Drizzle ORM + Neon (PostgreSQL) | 0.45.x |
+| Database | Drizzle ORM + postgres (Supabase/Neon) | 0.45.x |
 | Data Fetching | @tanstack/react-query + superjson | 5.x |
 | Forms | react-hook-form + @hookform/resolvers/zod | 7.x |
 | Validation | Zod | 3.x |
@@ -271,8 +271,11 @@ export const authPlugin = new Elysia({ name: "better-auth" })
 ### Instance — `src/db/index.ts`
 
 ```typescript
-import { drizzle } from "drizzle-orm/neon-http";
-export const db = drizzle(process.env.DATABASE_URL as string);
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+
+const client = postgres(process.env.DATABASE_URL as string);
+export const db = drizzle(client);
 ```
 
 ### Drizzle Config — `drizzle.config.ts`
