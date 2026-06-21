@@ -62,7 +62,7 @@ export function PostsPageClient() {
           </div>
           <div className="flex items-center gap-2">
             <Link
-              href="/settings"
+              href="/dashboard/settings"
               className={buttonVariants({ variant: "secondary" })}
             >
               Settings
