@@ -1,4 +1,4 @@
-import { count, eq, ilike } from "drizzle-orm";
+import { asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import { Elysia } from "elysia";
 import z from "zod";
 import { db } from "@/db";
@@ -11,7 +11,12 @@ export const permissionsRouter = new Elysia({ prefix: "/permissions" })
   .get(
     "/",
     async ({ query }) => {
-      const { page, limit, search } = paginationSchema.parse(query);
+      const { page, limit, search, sortBy, sortOrder } = paginationSchema
+        .extend({
+          sortBy: z.string().optional(),
+          sortOrder: z.enum(["asc", "desc"]).optional(),
+        })
+        .parse(query);
       const offset = (page - 1) * limit;
 
       const conditions = [];
@@ -21,11 +26,33 @@ export const permissionsRouter = new Elysia({ prefix: "/permissions" })
 
       const whereClause = conditions.length > 0 ? conditions[0] : undefined;
 
+      const sortableColumns: Record<
+        string,
+        | typeof permissions.name
+        | typeof permissions.description
+        | typeof permissions.createdAt
+        | typeof permissions.updatedAt
+      > = {
+        name: permissions.name,
+        description: permissions.description,
+        createdAt: permissions.createdAt,
+        updatedAt: permissions.updatedAt,
+      };
+
+      let orderByClause;
+      if (sortBy && sortOrder) {
+        const column = sortableColumns[sortBy];
+        if (column) {
+          orderByClause = sortOrder === "asc" ? asc(column) : desc(column);
+        }
+      }
+
       const [data, [{ count: total }]] = await Promise.all([
         db
           .select()
           .from(permissions)
           .where(whereClause)
+          .orderBy(orderByClause ?? permissions.name)
           .limit(limit)
           .offset(offset),
         db.select({ count: count() }).from(permissions).where(whereClause),
@@ -42,7 +69,29 @@ export const permissionsRouter = new Elysia({ prefix: "/permissions" })
       } as PaginatedResponse<Permission>;
     },
     {
-      query: paginationSchema,
+      query: paginationSchema.extend({
+        sortBy: z.string().optional(),
+        sortOrder: z.enum(["asc", "desc"]).optional(),
+      }),
+    },
+  )
+  .post(
+    "/bulk-delete",
+    async ({ body }) => {
+      const { ids } = body;
+
+      const deletedPermissions = await db
+        .delete(permissions)
+        .where(inArray(permissions.id, ids))
+        .returning();
+
+      return { deleted: deletedPermissions.length };
+    },
+    {
+      body: z.object({
+        ids: z.array(z.string()).min(1, "At least one permission ID is required"),
+      }),
+      auth: true,
     },
   )
   .get(
