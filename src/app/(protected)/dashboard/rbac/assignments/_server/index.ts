@@ -9,7 +9,7 @@ import type {
 } from "./type";
 
 export async function fetchAssignments(
-  params?: AssignmentPaginationInput,
+  params?: AssignmentPaginationInput & { sortBy?: string; sortOrder?: "asc" | "desc" },
 ): Promise<PaginatedResponse<Assignment>> {
   const { data, error } = await api.assignments.get({
     query: params ?? { page: 1, limit: 10 },
@@ -74,6 +74,14 @@ export async function deleteAssignment(id: string): Promise<string> {
   }
 
   return id;
+}
+
+export async function deleteAssignments(ids: string[]): Promise<void> {
+  const { error } = await api.assignments["bulk-delete"].post({ ids });
+
+  if (error) {
+    throw new Error(extractErrorMessage("Failed to delete assignments", error));
+  }
 }
 
 export async function addScopeItemsToAssignment(

@@ -1,4 +1,4 @@
-import { and, count, eq, ilike } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import { Elysia } from "elysia";
 import z from "zod";
 import { db } from "@/db";
@@ -52,8 +52,13 @@ export const assignmentsRouter = new Elysia({ prefix: "/assignments" })
   .get(
     "/",
     async ({ query }) => {
-      const { page, limit, search, roleId, scopeId, scopeMode } =
-        assignmentPaginationSchema.parse(query);
+      const { page, limit, search, roleId, scopeId, scopeMode, sortBy, sortOrder } =
+        assignmentPaginationSchema
+          .extend({
+            sortBy: z.string().optional(),
+            sortOrder: z.enum(["asc", "desc"]).optional(),
+          })
+          .parse(query);
       const offset = (page - 1) * limit;
 
       const conditions = [];
@@ -72,11 +77,33 @@ export const assignmentsRouter = new Elysia({ prefix: "/assignments" })
 
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+      const sortableColumns: Record<
+        string,
+        | typeof assignments.name
+        | typeof assignments.scopeMode
+        | typeof assignments.createdAt
+        | typeof assignments.updatedAt
+      > = {
+        name: assignments.name,
+        scopeMode: assignments.scopeMode,
+        createdAt: assignments.createdAt,
+        updatedAt: assignments.updatedAt,
+      };
+
+      let orderByClause;
+      if (sortBy && sortOrder) {
+        const column = sortableColumns[sortBy];
+        if (column) {
+          orderByClause = sortOrder === "asc" ? asc(column) : desc(column);
+        }
+      }
+
       const [data, [{ count: total }]] = await Promise.all([
         db
           .select()
           .from(assignments)
           .where(whereClause)
+          .orderBy(orderByClause ?? assignments.name)
           .limit(limit)
           .offset(offset),
         db.select({ count: count() }).from(assignments).where(whereClause),
@@ -93,7 +120,29 @@ export const assignmentsRouter = new Elysia({ prefix: "/assignments" })
       } as PaginatedResponse<Assignment>;
     },
     {
-      query: assignmentPaginationSchema,
+      query: assignmentPaginationSchema.extend({
+        sortBy: z.string().optional(),
+        sortOrder: z.enum(["asc", "desc"]).optional(),
+      }),
+    },
+  )
+  .post(
+    "/bulk-delete",
+    async ({ body }) => {
+      const { ids } = body;
+
+      const deletedAssignments = await db
+        .delete(assignments)
+        .where(inArray(assignments.id, ids))
+        .returning();
+
+      return { deleted: deletedAssignments.length };
+    },
+    {
+      body: z.object({
+        ids: z.array(z.string()).min(1, "At least one assignment ID is required"),
+      }),
+      auth: true,
     },
   )
   .get(
