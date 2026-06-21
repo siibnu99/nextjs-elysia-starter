@@ -47,6 +47,8 @@ export function useDataTable<T>({
   limit = 10,
   paginated = true,
 }: UseDataTableOptions<T>) {
+  const [isClient, setIsClient] = useState(false)
+  const [hasFetched, setHasFetched] = useState(false)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [sortBy, setSortBy] = useState<string | undefined>()
@@ -57,10 +59,14 @@ export function useDataTable<T>({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const startTimeRef = useRef<number>(0)
 
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
   const debouncedSearch = useDebounce(search, 300)
   const { density, handleDensityChange } = useTableDensity()
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const { data, isError, error, refetch, isPending } = useQuery({
     queryKey: [...queryKey, page, debouncedSearch, sortBy, sortOrder],
     queryFn: async () => {
       startTimeRef.current = performance.now()
@@ -73,9 +79,15 @@ export function useDataTable<T>({
       })
       setResponseTime(Math.round(performance.now() - startTimeRef.current))
       setLastLoadTime(new Date())
+      setHasFetched(true)
       return result
     },
+    enabled: isClient,
   })
+
+  // Loading is true until client-side and first fetch completes
+  // This ensures consistent state between server and client
+  const isLoading = !isClient || (isClient && !hasFetched && isPending)
 
   const normalizedData = paginated
     ? (data as PaginatedResponse<T>)?.data ?? []
