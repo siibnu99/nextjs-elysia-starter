@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, type ReactNode } from "react"
+import { useAutoAnimate } from "@formkit/auto-animate/react"
 import { DataTableHeader } from "../organisms/data-table-header"
 import { DataTableBody } from "../organisms/data-table-body"
 import { DataTableFooter } from "../organisms/data-table-footer"
@@ -65,7 +66,11 @@ export interface DataTableProps<T> {
   layout?: "table" | "grid"
   onLayoutChange?: (layout: "table" | "grid") => void
   gridCols?: 1 | 2 | 3 | 4
-  renderCard?: (row: T) => ReactNode
+  renderCard?: (row: T, selectionProps?: {
+    selectable: boolean
+    selected: boolean
+    onSelectionChange: (selected: boolean) => void
+  }) => ReactNode
 
   // State
   isLoading?: boolean
@@ -131,7 +136,15 @@ export function DataTable<T>({
   getRowId,
 }: DataTableProps<T>) {
   const [exportLoading, setExportLoading] = useState(false)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+  const [contentRef] = useAutoAnimate()
   const totalPages = Math.ceil(totalItems / limit)
+
+  useEffect(() => {
+    if (!isLoading && !isError) {
+      setHasLoadedOnce(true)
+    }
+  }, [isLoading, isError])
 
   async function handleExport(format: "csv" | "json") {
     if (!onExport) return
@@ -155,18 +168,6 @@ export function DataTable<T>({
   const allSelected = data.length > 0 && selectedRows.length === data.length
   const someSelected = selectedRows.length > 0 && selectedRows.length < data.length
 
-  if (isLoading) {
-    return <DataTableSkeleton columns={columns.length + (enableSelection ? 1 : 0)} />
-  }
-
-  if (isError) {
-    return <DataTableError message={errorMessage} onRetry={onRetry} />
-  }
-
-  if (data.length === 0) {
-    return <DataTableEmpty message={emptyMessage} icon={emptyIcon} action={emptyAction} />
-  }
-
   return (
     <div className="space-y-4">
       <DataTableHeader
@@ -177,6 +178,7 @@ export function DataTable<T>({
         lastLoadTime={lastLoadTime}
         onRefresh={onRefresh}
         isRefreshing={isRefreshing}
+        disabled={isLoading}
       />
 
       <DataTableToolbar
@@ -192,40 +194,71 @@ export function DataTable<T>({
         onDensityChange={onDensityChange}
         layout={layout}
         onLayoutChange={onLayoutChange}
+        disabled={isLoading}
       />
 
-      {layout === "grid" && renderCard ? (
-        <div className={`grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-${gridCols}`}>
-          {data.map((row, i) => (
-            <div key={getRowId?.(row) ?? i}>
-              {renderCard(row)}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="rounded-lg border">
-          <DataTableBody
-            data={data}
-            columns={columns}
-            enableSelection={enableSelection}
-            selectedRows={selectedRows}
-            onSelectionChange={onSelectionChange}
-            sortBy={sortBy}
-            sortOrder={sortOrder}
-            onSort={enableSorting ? onSort : undefined}
-            density={density}
-            getRowId={getRowId}
-          />
-        </div>
+      <div ref={contentRef}>
+        {isLoading ? (
+          <DataTableSkeleton columns={columns.length + (enableSelection ? 1 : 0)} />
+        ) : isError ? (
+          <DataTableError message={errorMessage} onRetry={onRetry} />
+        ) : data.length === 0 ? (
+          <DataTableEmpty message={emptyMessage} icon={emptyIcon} action={emptyAction} />
+        ) : layout === "grid" && renderCard ? (
+          <div className={`grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-${gridCols}`}>
+            {data.map((row, i) => {
+              const rowId = getRowId?.(row) ?? String(i)
+              const isSelected = enableSelection
+                ? selectedRows.some((r) => getRowId ? getRowId(r) === rowId : r === row)
+                : false
+
+              return (
+                <div key={rowId}>
+                  {renderCard(row, enableSelection ? {
+                    selectable: true,
+                    selected: isSelected,
+                    onSelectionChange: (selected) => {
+                      if (!onSelectionChange) return
+                      if (selected) {
+                        onSelectionChange([...selectedRows, row])
+                      } else {
+                        onSelectionChange(selectedRows.filter((r) =>
+                          getRowId ? getRowId(r) !== rowId : r !== row
+                        ))
+                      }
+                    },
+                  } : undefined)}
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="rounded-lg border">
+            <DataTableBody
+              data={data}
+              columns={columns}
+              enableSelection={enableSelection}
+              selectedRows={selectedRows}
+              onSelectionChange={onSelectionChange}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={enableSorting ? onSort : undefined}
+              density={density}
+              getRowId={getRowId}
+            />
+          </div>
+        )}
+      </div>
+
+      {hasLoadedOnce && (
+        <DataTableFooter
+          page={page}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          selectedCount={selectedRows.length}
+          onPageChange={onPageChange}
+        />
       )}
-
-      <DataTableFooter
-        page={page}
-        totalPages={totalPages}
-        totalItems={totalItems}
-        selectedCount={selectedRows.length}
-        onPageChange={onPageChange}
-      />
     </div>
   )
 }

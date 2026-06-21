@@ -9,9 +9,10 @@ interface TableStatsProps {
   lastLoadTime?: Date | null
   onRefresh?: () => void
   isRefreshing?: boolean
+  disabled?: boolean
 }
 
-export function TableStats({ responseTime, lastLoadTime, onRefresh, isRefreshing }: TableStatsProps) {
+export function TableStats({ responseTime, lastLoadTime, onRefresh, isRefreshing, disabled }: TableStatsProps) {
   const { formattedResponseTime, formattedRelativeTime } = useFormatTime({
     responseTime,
     lastLoadTime,
@@ -34,7 +35,7 @@ export function TableStats({ responseTime, lastLoadTime, onRefresh, isRefreshing
           variant="ghost"
           size="sm"
           onClick={onRefresh}
-          disabled={isRefreshing}
+          disabled={isRefreshing || disabled}
           className="h-8 px-2"
         >
           <RefreshCwIcon className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />

@@ -1,6 +1,6 @@
 "use client"
 
-import { type ReactNode } from "react"
+import { useState, useEffect, type ReactNode } from "react"
 import { useAutoAnimate } from "@formkit/auto-animate/react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
@@ -73,6 +73,7 @@ function CardListToolbar({
   enableDensity,
   onLayoutChange,
   onDensityChange,
+  disabled,
 }: {
   layout: Layout
   density: Density
@@ -80,11 +81,12 @@ function CardListToolbar({
   enableDensity?: boolean
   onLayoutChange?: (layout: Layout) => void
   onDensityChange?: (density: Density) => void
+  disabled?: boolean
 }) {
   if (!enableLayoutToggle && !enableDensity) return null
 
   return (
-    <div className="sticky top-0 z-10 flex items-center justify-between rounded-lg border bg-background/80 p-2 backdrop-blur-md">
+    <div className={`sticky top-0 z-10 flex items-center justify-between rounded-lg border bg-background/80 p-2 backdrop-blur-md ${disabled ? "opacity-50 pointer-events-none" : ""}`}>
       {enableLayoutToggle && onLayoutChange && (
         <div className="flex items-center rounded-md border">
           <Button
@@ -92,6 +94,7 @@ function CardListToolbar({
             size="sm"
             className="rounded-r-none"
             onClick={() => onLayoutChange("list")}
+            disabled={disabled}
           >
             <ListIcon className="h-4 w-4" />
           </Button>
@@ -100,13 +103,14 @@ function CardListToolbar({
             size="sm"
             className="rounded-l-none"
             onClick={() => onLayoutChange("grid")}
+            disabled={disabled}
           >
             <GridIcon className="h-4 w-4" />
           </Button>
         </div>
       )}
       {enableDensity && onDensityChange && (
-        <DensitySelector density={density} onDensityChange={onDensityChange} />
+        <DensitySelector density={density} onDensityChange={onDensityChange} disabled={disabled} />
       )}
     </div>
   )
@@ -115,14 +119,16 @@ function CardListToolbar({
 function DensitySelector({
   density,
   onDensityChange,
+  disabled,
 }: {
   density: Density
   onDensityChange: (density: Density) => void
+  disabled?: boolean
 }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" disabled={disabled}>
           <LayoutGridIcon className="mr-2 h-4 w-4" />
           Density
         </Button>
@@ -169,8 +175,8 @@ function CardListSkeleton({
       >
         {items.map((_, i) => (
           <div key={i} className={`rounded-lg border ${densityPaddingClasses[density]}`}>
-            <Skeleton className="h-4 w-3/4 mb-2" />
-            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-4 w-3/4 mb-2 animate-pulse" />
+            <Skeleton className="h-3 w-full animate-pulse" />
           </div>
         ))}
       </div>
@@ -181,8 +187,8 @@ function CardListSkeleton({
     <ul className={densitySpaceClasses[density]}>
       {items.map((_, i) => (
         <li key={i} className={`rounded-lg border ${densityPaddingClasses[density]}`}>
-          <Skeleton className="h-4 w-3/4 mb-2" />
-          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-4 w-3/4 mb-2 animate-pulse" />
+          <Skeleton className="h-3 w-full animate-pulse" />
         </li>
       ))}
     </ul>
@@ -247,20 +253,13 @@ export function CardList<T>({
   getRowId,
 }: CardListProps<T>) {
   const [listRef] = useAutoAnimate()
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
 
-  if (isLoading)
-    return (
-      <CardListSkeleton layout={layout} gridCols={gridCols} density={density} />
-    )
-  if (isError) return <CardListError message={error?.message} />
-  if (data.length === 0)
-    return (
-      <CardListEmpty
-        message={emptyMessage}
-        icon={emptyIcon}
-        action={emptyAction}
-      />
-    )
+  useEffect(() => {
+    if (!isLoading && !isError) {
+      setHasLoadedOnce(true)
+    }
+  }, [isLoading, isError])
 
   return (
     <div className="space-y-4">
@@ -271,36 +270,48 @@ export function CardList<T>({
         enableDensity={enableDensity}
         onLayoutChange={onLayoutChange}
         onDensityChange={onDensityChange}
+        disabled={isLoading}
       />
 
-      {layout === "grid" ? (
-        <div
-          ref={listRef}
-          className={`grid ${densityGapClasses[density]} grid-cols-1 sm:grid-cols-2 md:grid-cols-${gridCols}`}
-        >
-          {data.map((item, i) => (
-            <div
-              key={getRowId?.(item) ?? i}
-              className={`flex flex-col ${densityPaddingClasses[density]}`}
-            >
-              <div className="flex-1">{renderItem(item, i)}</div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <ul ref={listRef} className={densitySpaceClasses[density]}>
-          {data.map((item, i) => (
-            <li
-              key={getRowId?.(item) ?? i}
-              className={densityPaddingClasses[density]}
-            >
-              {renderItem(item, i)}
-            </li>
-          ))}
-        </ul>
-      )}
+      <div ref={listRef}>
+        {isLoading ? (
+          <CardListSkeleton layout={layout} gridCols={gridCols} density={density} />
+        ) : isError ? (
+          <CardListError message={error?.message} />
+        ) : data.length === 0 ? (
+          <CardListEmpty
+            message={emptyMessage}
+            icon={emptyIcon}
+            action={emptyAction}
+          />
+        ) : layout === "grid" ? (
+          <div
+            className={`grid ${densityGapClasses[density]} grid-cols-1 sm:grid-cols-2 md:grid-cols-${gridCols}`}
+          >
+            {data.map((item, i) => (
+              <div
+                key={getRowId?.(item) ?? i}
+                className={`flex flex-col ${densityPaddingClasses[density]}`}
+              >
+                <div className="flex-1">{renderItem(item, i)}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <ul className={densitySpaceClasses[density]}>
+            {data.map((item, i) => (
+              <li
+                key={getRowId?.(item) ?? i}
+                className={densityPaddingClasses[density]}
+              >
+                {renderItem(item, i)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
-      {page && totalPages && totalPages > 1 && onPageChange && (
+      {hasLoadedOnce && page && totalPages && totalPages > 1 && onPageChange && (
         <TablePagination
           page={page}
           totalPages={totalPages}

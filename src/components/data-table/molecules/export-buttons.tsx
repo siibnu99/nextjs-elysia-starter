@@ -12,13 +12,14 @@ import { DownloadIcon, FileJsonIcon, FileSpreadsheetIcon } from "lucide-react"
 interface ExportButtonsProps {
   onExport: (format: "csv" | "json") => Promise<void>
   loading?: boolean
+  disabled?: boolean
 }
 
-export function ExportButtons({ onExport, loading }: ExportButtonsProps) {
+export function ExportButtons({ onExport, loading, disabled }: ExportButtonsProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={loading}>
+        <Button variant="outline" size="sm" disabled={loading || disabled}>
           <DownloadIcon className="mr-2 h-4 w-4" />
           {loading ? "Exporting..." : "Export"}
         </Button>

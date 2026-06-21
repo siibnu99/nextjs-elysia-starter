@@ -10,13 +10,14 @@ import { LayoutGridIcon } from "lucide-react"
 interface DensitySelectorProps {
   density: "compact" | "normal" | "spacious"
   onDensityChange: (density: "compact" | "normal" | "spacious") => void
+  disabled?: boolean
 }
 
-export function DensitySelector({ density, onDensityChange }: DensitySelectorProps) {
+export function DensitySelector({ density, onDensityChange, disabled }: DensitySelectorProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" disabled={disabled}>
           <LayoutGridIcon className="mr-2 h-4 w-4" />
           Density
         </Button>

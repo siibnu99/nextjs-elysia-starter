@@ -9,6 +9,7 @@ interface DataTableHeaderProps {
   lastLoadTime?: Date | null
   onRefresh?: () => void
   isRefreshing?: boolean
+  disabled?: boolean
 }
 
 export function DataTableHeader({
@@ -19,6 +20,7 @@ export function DataTableHeader({
   lastLoadTime,
   onRefresh,
   isRefreshing,
+  disabled,
 }: DataTableHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-4">
@@ -28,6 +30,7 @@ export function DataTableHeader({
           value={searchValue}
           onChange={onSearchChange}
           onClear={() => onSearchChange("")}
+          disabled={disabled}
         />
       )}
       <TableStats
@@ -35,6 +38,7 @@ export function DataTableHeader({
         lastLoadTime={lastLoadTime}
         onRefresh={onRefresh}
         isRefreshing={isRefreshing}
+        disabled={disabled}
       />
     </div>
   )
