@@ -1,4 +1,4 @@
-import { count, eq, ilike } from "drizzle-orm";
+import { asc, count, desc, eq, ilike } from "drizzle-orm";
 import { Elysia } from "elysia";
 import z from "zod";
 import { db } from "@/db";
@@ -46,7 +46,12 @@ export const scopesRouter = new Elysia({ prefix: "/scopes" })
   .get(
     "/",
     async ({ query }) => {
-      const { page, limit, search } = paginationSchema.parse(query);
+      const { page, limit, search, sortBy, sortOrder } = paginationSchema
+        .extend({
+          sortBy: z.string().optional(),
+          sortOrder: z.enum(["asc", "desc"]).optional(),
+        })
+        .parse(query);
       const offset = (page - 1) * limit;
 
       const conditions = [];
@@ -56,11 +61,33 @@ export const scopesRouter = new Elysia({ prefix: "/scopes" })
 
       const whereClause = conditions.length > 0 ? conditions[0] : undefined;
 
+      const sortableColumns: Record<
+        string,
+        | typeof scopes.name
+        | typeof scopes.description
+        | typeof scopes.createdAt
+        | typeof scopes.updatedAt
+      > = {
+        name: scopes.name,
+        description: scopes.description,
+        createdAt: scopes.createdAt,
+        updatedAt: scopes.updatedAt,
+      };
+
+      let orderByClause;
+      if (sortBy && sortOrder) {
+        const column = sortableColumns[sortBy];
+        if (column) {
+          orderByClause = sortOrder === "asc" ? asc(column) : desc(column);
+        }
+      }
+
       const [data, [{ count: total }]] = await Promise.all([
         db
           .select()
           .from(scopes)
           .where(whereClause)
+          .orderBy(orderByClause ?? scopes.name)
           .limit(limit)
           .offset(offset),
         db.select({ count: count() }).from(scopes).where(whereClause),
@@ -77,7 +104,10 @@ export const scopesRouter = new Elysia({ prefix: "/scopes" })
       } as PaginatedResponse<Scope>;
     },
     {
-      query: paginationSchema,
+      query: paginationSchema.extend({
+        sortBy: z.string().optional(),
+        sortOrder: z.enum(["asc", "desc"]).optional(),
+      }),
     },
   )
   .get(

@@ -10,7 +10,9 @@ import type {
   PaginationInput,
 } from "./type";
 
-export async function fetchScopes(params?: PaginationInput): Promise<PaginatedResponse<Scope>> {
+export async function fetchScopes(
+  params?: PaginationInput & { sortBy?: string; sortOrder?: "asc" | "desc" }
+): Promise<PaginatedResponse<Scope>> {
   const { data, error } = await api.scopes.get({
     query: params ?? { page: 1, limit: 10 },
   });
