@@ -137,12 +137,15 @@ export function RolesDataTable({
       layout={layout}
       onLayoutChange={handleLayoutChange}
       gridCols={3}
-      renderCard={(row) => (
+      renderCard={(row, selectionProps) => (
         <AutoCard
           row={row}
           columns={columnsWithActions}
           onEdit={() => onEdit(row)}
           onDelete={() => onDelete(row)}
+          selectable={selectionProps?.selectable}
+          selected={selectionProps?.selected}
+          onSelectionChange={selectionProps?.onSelectionChange}
         />
       )}
       isLoading={isLoading}
