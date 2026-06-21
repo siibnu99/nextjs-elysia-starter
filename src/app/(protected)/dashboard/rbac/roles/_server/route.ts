@@ -1,4 +1,4 @@
-import { and, count, eq, ilike } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import { Elysia } from "elysia";
 import z from "zod";
 import { db } from "@/db";
@@ -11,7 +11,10 @@ export const rolesRouter = new Elysia({ prefix: "/roles" })
   .get(
     "/",
     async ({ query }) => {
-      const { page, limit, search } = paginationSchema.parse(query);
+      const { page, limit, search, sortBy, sortOrder } = paginationSchema.extend({
+        sortBy: z.string().optional(),
+        sortOrder: z.enum(["asc", "desc"]).optional(),
+      }).parse(query);
       const offset = (page - 1) * limit;
 
       const conditions = [];
@@ -21,11 +24,27 @@ export const rolesRouter = new Elysia({ prefix: "/roles" })
 
       const whereClause = conditions.length > 0 ? conditions[0] : undefined;
 
+      const sortableColumns: Record<string, typeof roles.name | typeof roles.description | typeof roles.createdAt | typeof roles.updatedAt> = {
+        name: roles.name,
+        description: roles.description,
+        createdAt: roles.createdAt,
+        updatedAt: roles.updatedAt,
+      };
+
+      let orderByClause;
+      if (sortBy && sortOrder) {
+        const column = sortableColumns[sortBy];
+        if (column) {
+          orderByClause = sortOrder === "asc" ? asc(column) : desc(column);
+        }
+      }
+
       const [data, [{ count: total }]] = await Promise.all([
         db
           .select()
           .from(roles)
           .where(whereClause)
+          .orderBy(orderByClause ?? roles.name)
           .limit(limit)
           .offset(offset),
         db.select({ count: count() }).from(roles).where(whereClause),
@@ -42,7 +61,29 @@ export const rolesRouter = new Elysia({ prefix: "/roles" })
       } as PaginatedResponse<Role>;
     },
     {
-      query: paginationSchema,
+      query: paginationSchema.extend({
+        sortBy: z.string().optional(),
+        sortOrder: z.enum(["asc", "desc"]).optional(),
+      }),
+    },
+  )
+  .post(
+    "/bulk-delete",
+    async ({ body }) => {
+      const { ids } = body;
+
+      const deletedRoles = await db
+        .delete(roles)
+        .where(inArray(roles.id, ids))
+        .returning();
+
+      return { deleted: deletedRoles.length };
+    },
+    {
+      body: z.object({
+        ids: z.array(z.string()).min(1, "At least one role ID is required"),
+      }),
+      auth: true,
     },
   )
   .get(

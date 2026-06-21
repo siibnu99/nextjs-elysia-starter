@@ -2,7 +2,9 @@ import { api } from "@/lib/eden";
 import { extractErrorMessage } from "@/lib/utils";
 import type { Role, RoleBodyInput, PaginatedResponse, PaginationInput, Permission } from "./type";
 
-export async function fetchRoles(params?: PaginationInput): Promise<PaginatedResponse<Role>> {
+export async function fetchRoles(
+  params?: PaginationInput & { sortBy?: string; sortOrder?: "asc" | "desc" }
+): Promise<PaginatedResponse<Role>> {
   const { data, error } = await api.roles.get({
     query: params ?? { page: 1, limit: 10 },
   });
@@ -56,6 +58,14 @@ export async function deleteRole(id: string): Promise<string> {
   }
 
   return id;
+}
+
+export async function deleteRoles(ids: string[]): Promise<void> {
+  const { error } = await api.roles["bulk-delete"].post({ ids });
+
+  if (error) {
+    throw new Error(extractErrorMessage("Failed to delete roles", error));
+  }
 }
 
 export async function fetchRolePermissions(roleId: string): Promise<Permission[]> {
