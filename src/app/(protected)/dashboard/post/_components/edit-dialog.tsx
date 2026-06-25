@@ -2,11 +2,14 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { updatePost } from "../_server";
-import type { Post, PostBodyInput } from "../_server/type";
-import { postsQueryKey } from "../_server/type";
+import { type Post, type PostBodyInput, postsQueryKey } from "../_server/type";
 import { PostForm } from "./post-form";
 
 type EditPostDialogProps = {
@@ -23,7 +26,7 @@ export function EditPostDialog({
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: updatePost,
+    mutationFn: (values: PostBodyInput) => updatePost(post.id, values),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: postsQueryKey });
       onOpenChange(false);
@@ -35,15 +38,15 @@ export function EditPostDialog({
   });
 
   const handleSubmit = (values: PostBodyInput) => {
-    mutation.mutate({
-      id: post.id,
-      ...values,
-    });
+    mutation.mutate(values);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={!mutation.isPending}>
+        <DialogHeader>
+          <DialogTitle>Edit Post</DialogTitle>
+        </DialogHeader>
         <PostForm
           mode="edit"
           initialValues={{

@@ -1,5 +1,10 @@
 import { z } from "zod";
 import type { posts } from "@/db/schema";
+import {
+  type PaginatedResponse,
+  type PaginationInput,
+  paginationSchema,
+} from "@/lib/types/pagination";
 
 export type Post = typeof posts.$inferSelect;
 
@@ -10,7 +15,13 @@ export const postBodySchema = z.object({
 
 export type PostBodyInput = z.infer<typeof postBodySchema>;
 
-export type PostCreateInput = PostBodyInput;
-export type PostUpdateInput = PostBodyInput & Pick<Post, "id">;
-
 export const postsQueryKey = ["posts"] as const;
+
+export const postPaginationSchema = paginationSchema.extend({
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional(),
+});
+
+export type PostPaginationInput = z.infer<typeof postPaginationSchema>;
+
+export { type PaginatedResponse, type PaginationInput, paginationSchema };

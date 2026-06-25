@@ -1,18 +1,27 @@
 import { api } from "@/lib/eden";
 import { extractErrorMessage } from "@/lib/utils";
-import type { Post, PostCreateInput, PostUpdateInput } from "./type";
+import type {
+  PaginatedResponse,
+  Post,
+  PostBodyInput,
+  PostPaginationInput,
+} from "./type";
 
-export async function fetchPosts(): Promise<Post[]> {
-  const { data, error } = await api.posts.get();
+export async function fetchPosts(
+  params?: PostPaginationInput,
+): Promise<PaginatedResponse<Post>> {
+  const { data, error } = await api.posts.get({
+    query: params ?? { page: 1, limit: 10 },
+  });
 
   if (error) {
     throw new Error(extractErrorMessage("Failed to fetch posts", error));
   }
 
-  return data ?? [];
+  return data as PaginatedResponse<Post>;
 }
 
-export async function createPost(input: PostCreateInput): Promise<Post> {
+export async function createPost(input: PostBodyInput): Promise<Post> {
   const { data, error } = await api.posts.post(input);
 
   if (error) {
@@ -26,15 +35,11 @@ export async function createPost(input: PostCreateInput): Promise<Post> {
   return data as Post;
 }
 
-export async function updatePost(input: PostUpdateInput): Promise<Post> {
-  const { data, error } = await api
-    .posts({
-      id: input.id,
-    })
-    .patch({
-      name: input.name,
-      content: input.content,
-    });
+export async function updatePost(
+  id: string,
+  input: PostBodyInput,
+): Promise<Post> {
+  const { data, error } = await api.posts({ id }).patch(input);
 
   if (error) {
     throw new Error(extractErrorMessage("Failed to update post.", error));
@@ -51,4 +56,12 @@ export async function deletePost(id: string): Promise<string> {
   }
 
   return id;
+}
+
+export async function deletePosts(ids: string[]): Promise<void> {
+  const { error } = await api.posts["bulk-delete"].post({ ids });
+
+  if (error) {
+    throw new Error(extractErrorMessage("Failed to delete posts", error));
+  }
 }

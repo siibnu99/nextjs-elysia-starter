@@ -1,22 +1,87 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { Elysia } from "elysia";
 import z from "zod";
 import { db } from "@/db";
 import { posts } from "@/db/schema";
 import { authPlugin } from "@/server/protected-route";
-import { postBodySchema } from "./type";
+import {
+  type PaginatedResponse,
+  type Post,
+  paginationSchema,
+  postBodySchema,
+} from "./type";
 
 export const postsRouter = new Elysia({ prefix: "/posts" })
   .use(authPlugin)
-  .get("/", async () => {
-    const postsData = await db.select().from(posts);
+  .get(
+    "/",
+    async ({ query }) => {
+      const { page, limit, search, sortBy, sortOrder } = paginationSchema
+        .extend({
+          sortBy: z.string().optional(),
+          sortOrder: z.enum(["asc", "desc"]).optional(),
+        })
+        .parse(query);
+      const offset = (page - 1) * limit;
 
-    if (!postsData) {
-      throw new Response("Posts not found", { status: 404 });
-    }
+      const conditions = [];
+      if (search) {
+        conditions.push(
+          or(
+            ilike(posts.name, `%${search}%`),
+            ilike(posts.content, `%${search}%`),
+          ),
+        );
+      }
 
-    return postsData;
-  })
+      const whereClause =
+        conditions.length > 0 ? and(...conditions) : undefined;
+
+      const sortableColumns: Record<
+        string,
+        typeof posts.name | typeof posts.createdAt | typeof posts.updatedAt
+      > = {
+        name: posts.name,
+        createdAt: posts.createdAt,
+        updatedAt: posts.updatedAt,
+      };
+
+      let orderByClause: ReturnType<typeof asc> | undefined;
+      if (sortBy && sortOrder) {
+        const column = sortableColumns[sortBy];
+        if (column) {
+          orderByClause = sortOrder === "asc" ? asc(column) : desc(column);
+        }
+      }
+
+      const [postsData, [{ count: total }]] = await Promise.all([
+        db
+          .select()
+          .from(posts)
+          .where(whereClause)
+          .orderBy(orderByClause ?? posts.createdAt)
+          .limit(limit)
+          .offset(offset),
+        db.select({ count: count() }).from(posts).where(whereClause),
+      ]);
+
+      return {
+        data: postsData,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      } as PaginatedResponse<Post>;
+    },
+    {
+      query: paginationSchema.extend({
+        sortBy: z.string().optional(),
+        sortOrder: z.enum(["asc", "desc"]).optional(),
+      }),
+    },
+  )
   .get(
     "/:id",
     async ({ params }) => {
@@ -59,6 +124,25 @@ export const postsRouter = new Elysia({ prefix: "/posts" })
     },
     {
       body: postBodySchema,
+      auth: true,
+    },
+  )
+  .post(
+    "/bulk-delete",
+    async ({ body }) => {
+      const { ids } = body;
+
+      const deletedPosts = await db
+        .delete(posts)
+        .where(inArray(posts.id, ids))
+        .returning();
+
+      return { deleted: deletedPosts.length };
+    },
+    {
+      body: z.object({
+        ids: z.array(z.string()).min(1, "At least one post ID is required"),
+      }),
       auth: true,
     },
   )

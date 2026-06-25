@@ -2,11 +2,14 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { createPost } from "../_server";
-import type { PostBodyInput } from "../_server/type";
-import { postsQueryKey } from "../_server/type";
+import { type PostBodyInput, postsQueryKey } from "../_server/type";
 import { PostForm } from "./post-form";
 
 type CreatePostDialogProps = {
@@ -39,6 +42,9 @@ export function CreatePostDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={!mutation.isPending}>
+        <DialogHeader>
+          <DialogTitle>Create Post</DialogTitle>
+        </DialogHeader>
         <PostForm
           mode="create"
           isSubmitting={mutation.isPending}
