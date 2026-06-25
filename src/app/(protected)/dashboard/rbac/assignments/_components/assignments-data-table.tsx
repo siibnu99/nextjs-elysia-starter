@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { DataTable, type Column } from "@/components/data-table"
 import { ColumnWithActions } from "@/components/data-table/molecules/column-with-actions"
 import { useDataTable } from "@/hooks/use-data-table"
@@ -8,42 +9,8 @@ import { AutoCard } from "@/components/auto-card"
 import { Badge } from "@/components/ui/badge"
 import { fetchAssignments } from "../_server"
 import { assignmentsQueryKey, type Assignment } from "../_server/type"
-
-const columns: Column<Assignment>[] = [
-  {
-    key: "name",
-    header: "Name",
-    sortable: true,
-    render: (assignment) => <span className="font-medium">{assignment.name}</span>,
-  },
-  {
-    key: "scopeMode",
-    header: "Scope Mode",
-    render: (assignment) => (
-      <Badge variant={assignment.scopeMode === "global" ? "default" : "outline"}>
-        {assignment.scopeMode}
-      </Badge>
-    ),
-  },
-  {
-    key: "roleId",
-    header: "Role",
-    render: (assignment) => <span className="text-muted-foreground">{assignment.roleId}</span>,
-  },
-  {
-    key: "scopeId",
-    header: "Scope",
-    render: (assignment) => (
-      <span className="text-muted-foreground">{assignment.scopeId ?? "-"}</span>
-    ),
-  },
-  {
-    key: "actions",
-    header: "Actions",
-    className: "w-[100px]",
-    render: () => null,
-  },
-]
+import { fetchRoles } from "../../roles/_server"
+import { rolesQueryKey } from "../../roles/_server/type"
 
 interface AssignmentsDataTableProps {
   onEdit: (assignment: Assignment) => void
@@ -61,6 +28,61 @@ export function AssignmentsDataTable({
   onSelectionChange,
 }: AssignmentsDataTableProps) {
   const [layout, setLayout] = useState<"table" | "grid">("table")
+
+  const [isMounted, setIsMounted] = useState(false)
+  useEffect(() => setIsMounted(true), [])
+
+  const { data: rolesData } = useQuery({
+    queryKey: rolesQueryKey,
+    queryFn: () => fetchRoles({ page: 1, limit: 100 }),
+    enabled: isMounted,
+  })
+
+  const rolesMap = useMemo(() => {
+    const roles = rolesData?.data ?? []
+    return Object.fromEntries(roles.map((r) => [r.id, r.name]))
+  }, [rolesData])
+
+  const columns = useMemo<Column<Assignment>[]>(
+    () => [
+      {
+        key: "name",
+        header: "Name",
+        sortable: true,
+        render: (assignment) => <span className="font-medium">{assignment.name}</span>,
+      },
+      {
+        key: "scopeMode",
+        header: "Scope Mode",
+        render: (assignment) => (
+          <Badge variant={assignment.scopeMode === "global" ? "default" : "outline"}>
+            {assignment.scopeMode}
+          </Badge>
+        ),
+      },
+      {
+        key: "roleId",
+        header: "Role",
+        render: (assignment) => (
+          <span className="text-muted-foreground">{rolesMap[assignment.roleId] ?? assignment.roleId}</span>
+        ),
+      },
+      {
+        key: "scopeId",
+        header: "Scope",
+        render: (assignment) => (
+          <span className="text-muted-foreground">{assignment.scopeId ?? "-"}</span>
+        ),
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        className: "w-[100px]",
+        render: () => null,
+      },
+    ],
+    [rolesMap],
+  )
 
   useEffect(() => {
     if (typeof document === "undefined") return
@@ -105,7 +127,7 @@ export function AssignmentsDataTable({
     exportColumns: [
       { key: "name", header: "Name" },
       { key: "scopeMode", header: "Scope Mode" },
-      { key: "roleId", header: "Role ID" },
+      { key: "roleId", header: "Role" },
       { key: "scopeId", header: "Scope ID" },
     ],
   })
