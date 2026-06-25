@@ -178,7 +178,7 @@ export function DataTable<T>({
         lastLoadTime={lastLoadTime}
         onRefresh={onRefresh}
         isRefreshing={isRefreshing}
-        disabled={isLoading}
+        disabled={!!isLoading}
       />
 
       <DataTableToolbar
@@ -194,7 +194,7 @@ export function DataTable<T>({
         onDensityChange={onDensityChange}
         layout={layout}
         onLayoutChange={onLayoutChange}
-        disabled={isLoading}
+        disabled={!!isLoading}
       />
 
       <div ref={contentRef}>

@@ -87,7 +87,7 @@ export function useDataTable<T>({
 
   // Loading is true until client-side and first fetch completes
   // This ensures consistent state between server and client
-  const isLoading = !isClient || (isClient && !hasFetched && isPending)
+  const isLoading: boolean = !isClient || !!(isClient && !hasFetched && isPending)
 
   const normalizedData = paginated
     ? (data as PaginatedResponse<T>)?.data ?? []
