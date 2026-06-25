@@ -7,6 +7,7 @@ import { permissionsRouter } from "@/app/(protected)/dashboard/rbac/permissions/
 import { scopesRouter } from "@/app/(protected)/dashboard/rbac/scopes/_server/route";
 import { assignmentsRouter } from "@/app/(protected)/dashboard/rbac/assignments/_server/route";
 import { userAssignmentsRouter } from "@/app/(protected)/dashboard/rbac/user-assignments/_server/route";
+import { usersRouter } from "@/app/(protected)/dashboard/rbac/users/_server/route";
 
 export const app = new Elysia({ prefix: "/api" })
   .use(
@@ -27,7 +28,8 @@ export const app = new Elysia({ prefix: "/api" })
   .use(permissionsRouter)
   .use(scopesRouter)
   .use(assignmentsRouter)
-  .use(userAssignmentsRouter);
+  .use(userAssignmentsRouter)
+  .use(usersRouter);
 export const GET = app.fetch;
 export const POST = app.fetch;
 export const PUT = app.fetch;
