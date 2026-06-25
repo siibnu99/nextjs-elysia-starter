@@ -1,6 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import * as React from "react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -8,33 +10,31 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { usePathname } from "next/navigation"
-import Link from "next/link"
+} from "@/components/ui/breadcrumb";
 
 const routeLabels: Record<string, string> = {
   dashboard: "Dashboard",
   post: "Post",
   settings: "Settings",
   rbac: "RBAC",
+  users: "Users",
   roles: "Roles",
   permissions: "Permissions",
   scopes: "Scopes",
   assignments: "Assignments",
-  "user-assignments": "User Assignments",
-}
+};
 
 export function BreadcrumbNav() {
-  const pathname = usePathname()
-  const segments = pathname.split("/").filter(Boolean)
+  const pathname = usePathname();
+  const segments = pathname.split("/").filter(Boolean);
 
   const breadcrumbs = segments.map((segment, index) => {
-    const href = "/" + segments.slice(0, index + 1).join("/")
-    const label = routeLabels[segment] ?? segment
-    const isLast = index === segments.length - 1
+    const href = "/" + segments.slice(0, index + 1).join("/");
+    const label = routeLabels[segment] ?? segment;
+    const isLast = index === segments.length - 1;
 
-    return { href, label, isLast }
-  })
+    return { href, label, isLast };
+  });
 
   return (
     <Breadcrumb>
@@ -55,5 +55,5 @@ export function BreadcrumbNav() {
         ))}
       </BreadcrumbList>
     </Breadcrumb>
-  )
+  );
 }

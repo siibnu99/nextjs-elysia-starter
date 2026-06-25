@@ -1,90 +1,90 @@
-"use client"
+"use client";
 
-import { useEffect } from "react"
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarFooter,
-  SidebarHeader,
-  useSidebar,
-} from "@/components/ui/sidebar"
+  ChevronDown,
+  FileText,
+  GitBranch,
+  Home,
+  Key,
+  Layers,
+  LogOut,
+  Settings,
+  Shield,
+  User,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+} from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+} from "@/components/ui/dropdown-menu";
 import {
-  Home,
-  FileText,
-  Settings,
-  Shield,
-  Key,
-  Layers,
-  GitBranch,
-  UserCheck,
-  ChevronDown,
-  LogOut,
-  User,
-} from "lucide-react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { authClient } from "@/lib/auth-client"
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import { authClient } from "@/lib/auth-client";
 
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Post", url: "/dashboard/post", icon: FileText },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
-]
+];
 
 const rbacItems = [
+  { title: "Users", url: "/dashboard/rbac/users", icon: Users },
   { title: "Roles", url: "/dashboard/rbac/roles", icon: Shield },
   { title: "Permissions", url: "/dashboard/rbac/permissions", icon: Key },
   { title: "Scopes", url: "/dashboard/rbac/scopes", icon: Layers },
   { title: "Assignments", url: "/dashboard/rbac/assignments", icon: GitBranch },
-  { title: "User Assignments", url: "/dashboard/rbac/user-assignments", icon: UserCheck },
-]
+];
 
 interface AppSidebarProps {
   user: {
-    name?: string
-    email?: string
-    image?: string
-  }
+    name?: string;
+    email?: string;
+    image?: string;
+  };
 }
 
 export function AppSidebar({ user }: AppSidebarProps) {
-  const pathname = usePathname()
-  const router = useRouter()
-  const { toggleSidebar } = useSidebar()
+  const pathname = usePathname();
+  const router = useRouter();
+  const { toggleSidebar } = useSidebar();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "b" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        toggleSidebar()
+        e.preventDefault();
+        toggleSidebar();
       }
-    }
+    };
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [toggleSidebar])
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleSidebar]);
 
   async function handleLogout() {
-    await authClient.signOut()
-    router.push("/login")
+    await authClient.signOut();
+    router.push("/login");
   }
 
   return (
@@ -107,7 +107,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
+                    isActive={
+                      pathname === item.url ||
+                      pathname.startsWith(item.url + "/")
+                    }
                   >
                     <Link href={item.url}>
                       <item.icon className="h-4 w-4" />
@@ -188,5 +191,5 @@ export function AppSidebar({ user }: AppSidebarProps) {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
